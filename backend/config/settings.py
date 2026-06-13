@@ -1,12 +1,17 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+import urllib.parse
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key')
 DEBUG = bool(int(os.environ.get('DEBUG', 1)))
 ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.railway.app',
+    'https://*.up.railway.app',
+]
 
 INSTALLED_APPS = [
     'django.contrib.auth',
@@ -51,16 +56,37 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'carsharing'),
-        'USER': os.environ.get('DB_USER', 'carsharing_user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'carsharing_pass'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+# ──────────────────────────────────────────────
+# База данных
+# Поддерживает два формата:
+#   1. DATABASE_URL=postgresql://user:pass@host/db  (Railway)
+#   2. DB_HOST / DB_NAME / DB_USER / DB_PASSWORD    (Docker Compose)
+# ──────────────────────────────────────────────
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    parsed = urllib.parse.urlparse(DATABASE_URL)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': parsed.path.lstrip('/'),
+            'USER': parsed.username,
+            'PASSWORD': parsed.password,
+            'HOST': parsed.hostname,
+            'PORT': parsed.port or 5432,
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'carsharing'),
+            'USER': os.environ.get('DB_USER', 'carsharing_user'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', 'carsharing_pass'),
+            'HOST': os.environ.get('DB_HOST', 'db'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
+    }
 
 AUTH_USER_MODEL = 'users.User'
 
