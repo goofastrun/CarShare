@@ -1,0 +1,3 @@
+@echo off
+echo Запуск фаззинг-тестирования...
+docker compose exec backend pytest tests/test_fuzz.py -v
